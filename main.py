@@ -1,7 +1,13 @@
 from fastapi import FastAPI,HTTPException, status
 from pydantic import BaseModel
+from groq import Groq
+
+import groq
+print(dir(groq))  # Exibir todos os atributos e classes disponíveis no módulo
+
 
 description = "API desenvolvida durante a aula de Construção de APIs para IA2"
+
 
 app = FastAPI(
  title="Aula",
@@ -70,3 +76,50 @@ class Numeros(BaseModel):
 def soma_formato3(numeros: Numeros):
     total = numeros.numero1 + numeros.numero2
     return {"resultado": total}
+
+
+
+#Desenvolva um endpoint que deverá:
+#○ Receber por parâmetro um “tema” de uma história
+#○ Montar um prompt para que seja gerada uma história com base no tema
+#informado pelo usuário
+#○ Execute o prompt na OpenAI ou Groq
+#○ Retorne a resposta para o usuário
+
+# Modelo para receber a entrada como JSON
+class TemaInput(BaseModel):
+    tema: str
+
+# Rota para gerar a história
+@app.post(
+    path="/gerar_historia",
+    summary="Gera uma história com base no tema informado",
+    description="Recebe um tema e gera uma história com base no tema informado pelo usuário",
+    tags=["História"],      
+)
+def executar_prompt(tema_input: TemaInput):
+    tema = tema_input.tema
+    prompt = f"Escreva uma história sobre o {tema}"
+
+    try:
+        client = Groq(
+            api_key="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",  # Substitua pela chave correta
+        )
+
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile",
+        )
+
+        # Correção do acesso à resposta da API
+        resposta = chat_completion.choices[0].message.content
+
+        return {"resultado": resposta}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Função separada para chamar a API e estruturar o resultado
+def gerar_historia(tema: str):
+    historia = executar_prompt(TemaInput(tema=tema))
+    return {"Historia": historia["resultado"]}
